@@ -8,81 +8,73 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///livros.db'
 db = SQLAlchemy(app)
 
 class Livro(db.Model):
-   id = db.Column(db.Integer, primary_key=True)
-   titulo = db.Column(db.String(100), nullable=False)
-   autor = db.Column(db.String(100), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(100), nullable=False)
+    autor = db.Column(db.String(100), nullable=False)
 
 with app.app_context():
-   db.create_all()
-
-livros = [
-   {'id': 1, 'titulo': '1984', 'autor': 'George Orwell'},
-   {'id': 2, 'titulo': 'O Senhor dos Anéis', 'autor': 'J. R. R. Tolkien'},
-   {'id': 3, 'titulo': 'O Prisioneiro de Azkaban', 'autor': 'J. K. Rowling'}
-]
+    db.create_all()
 
 @app.route('/api/livros', methods=['GET'])
 def get_livros():
-   livros = Livro.query.all()
-   return jsonify([{
-      "id":livro.id,
-      "titulo":livro.titulo,
-      "autor":livro.autor
-   }for livro in livros]) 
+    livros = Livro.query.all()
+    return jsonify([{
+        "id":livro.id,
+        "titulo": livro.titulo,
+        "autor": livro.autor
+    } for livro in livros])
 
 @app.route('/api/livros/<int:id>', methods=['GET'])
 def get_livro(id):
-   livro = Livro.query.get(id)
-
-   return jsonify({
-      "id":livro.id,
-      "titulo":livro.titulo,
-      "autor":livro.autor
-   }) if livro else ('', 404)
+    livro = Livro.query.get(id)
+    
+    return jsonify({
+        "id":livro.id,
+        "titulo": livro.titulo,
+        "autor": livro.autor
+    }) if livro else ('', 404)
 
 @app.route('/api/livros', methods=['POST'])
 def add_livro():
-   dados = request.get_json()
-   novo_livro = Livro(
-      titulo=dados['titulo'],
-      autor=dados['autor'])
-   db.session.add(novo_livro)
-   db.session.commit()
-   return jsonify({
-      "id":novo_livro.id,
-      "titulo":novo_livro.titulo,
-      "autor":novo_livro.autor
-   }),201
-@app.route('/api/livros/<int:id>' , methods=['DELETE'] )
+    dados = request.get_json()
+    novo_livro = Livro(titulo=dados['titulo'], autor=dados['autor'])
+    db.session.add(novo_livro)
+    db.session.commit()
+    return jsonify({
+        "id":novo_livro.id,
+        "titulo": novo_livro.titulo,
+        "autor": novo_livro.autor
+    }), 201
+
+@app.route('/api/livros/<int:id>', methods=['DELETE'])
 def delete_livro(id):
-   livro = Livro.query.get(id)  
+    livro = Livro.query.get(id)
+    
+    if livro is None:
+        return jsonify({"error":"livro não encontrado"}), 404
+    
+    db.session.delete(livro)
+    db.session.commit()
+    return '', 204
 
-   if livro is None:
-      return jsonify({"error":"livro não encontrado"}), 404
+@app.route('/api/livros/<int:id>', methods=['PUT'])
+def update_livro(id):
+    livro = Livro.query.get(id)
 
-   db.session.delete(livro) 
-   db.session.commit()
-   return '', 204 
+    if livro is None:
+        return jsonify({"error":"livro não encontrado"}), 404
 
-@app.route('/api/livro/<int>' , methods=['PUT'])
-def uptade_livro(id):
-   livro = Livro.query.get(id) 
+    dados = request.get_json()
+    livro.titulo = dados.get('titulo', livro.titulo)
+    livro.autor = dados.get('autor', livro.autor)
 
-   if livro is None:
-      return jsonify({"error":"livro não encontrado"}), 404
+    db.session.commit()
 
-   dados = request.get_json()
-   livro.titulo = dados.get('titulo', livro.titulo)
-   livro.autor = dados.get('autor', livro.autor)
-
-   db.session.commit()
-
-   return jsonify({
-      "id":livro.id,
-      "titulo":livro.titulo,
-      "autor":livro.autor
-   }),201 
-
+    return jsonify({
+        "id":livro.id,
+        "titulo": livro.titulo,
+        "autor": livro.autor
+    }), 201
 
 if __name__ == '__main__':
-   app.run(port=5000, debug=True)
+    app.run(port=5000, debug=True)
